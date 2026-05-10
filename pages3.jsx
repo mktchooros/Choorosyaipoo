@@ -1,0 +1,658 @@
+/* global React */
+const { useState, useMemo } = React;
+const {
+  LOCATIONS, PRODUCTS, CUSTOMERS,
+  fmt, baht, tHHMM, tDateTH, stockTotal, stockLevel,
+  Counter, Sparkline, BarChart, Icon,
+} = window.IM;
+
+/* ====================================================================
+   Customers (รายชื่อลูกค้า)
+   ==================================================================== */
+function PageCustomers() {
+  const [q, setQ] = useState("");
+  const [tier, setTier] = useState("ทั้งหมด");
+  const [sel, setSel] = useState(CUSTOMERS[1].id);
+
+  const filtered = CUSTOMERS.filter(c => {
+    if (tier !== "ทั้งหมด" && c.tier !== tier) return false;
+    if (q && !(c.name.toLowerCase().includes(q.toLowerCase()) || c.id.toLowerCase().includes(q.toLowerCase()))) return false;
+    return true;
+  });
+
+  const cur = CUSTOMERS.find(c => c.id === sel);
+
+  const tierColor = (t) => t === "VIP" ? "accent" : t === "ขายส่ง" ? "info" : "";
+
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">รายชื่อลูกค้า</h1>
+          <div className="page-sub">ลูกค้าทั้งหมด {CUSTOMERS.length} ราย · ยอดสะสมปีนี้ {baht(CUSTOMERS.reduce((s,c)=>s+c.ytd,0))}</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn"><Icon name="download" size={15}/>ส่งออก</button>
+          <button className="btn btn-accent"><Icon name="plus" size={15}/>เพิ่มลูกค้า</button>
+        </div>
+      </div>
+
+      <div className="grid-2-1">
+        <div className="card">
+          <div className="card-head" style={{flexDirection:"column", alignItems:"stretch", gap:12}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+              <div className="card-title">ลูกค้าทั้งหมด</div>
+              <div className="seg">
+                {["ทั้งหมด","VIP","ขายส่ง","ปลีก"].map(t => (
+                  <button key={t} className={tier===t?"on":""} onClick={()=>setTier(t)}>{t}</button>
+                ))}
+              </div>
+            </div>
+            <div className="input-prefix">
+              <span className="prefix-icon"><Icon name="search" size={15}/></span>
+              <input className="input" placeholder="ค้นหาชื่อร้าน หรือเบอร์โทร..." value={q} onChange={e=>setQ(e.target.value)}/>
+            </div>
+          </div>
+          <table className="table">
+            <thead><tr>
+              <th>รหัส</th><th>ชื่อ</th><th>โซน</th><th>ระดับ</th><th className="num">ยอด YTD</th><th>ครั้งล่าสุด</th>
+            </tr></thead>
+            <tbody className="stagger">
+              {filtered.map(c => (
+                <tr key={c.id} onClick={()=>setSel(c.id)} style={{cursor:"pointer", background: sel===c.id ? "var(--surface)" : ""}}>
+                  <td className="cell-mono muted">{c.id}</td>
+                  <td>
+                    <div style={{display:"flex", alignItems:"center", gap:10}}>
+                      <div className="user-avatar" style={{width:30, height:30, fontSize:11}}>{c.name.split(" ").map(w=>w[0]).slice(0,2).join("")}</div>
+                      <div>
+                        <div className="cell-pri">{c.name}</div>
+                        <div style={{fontSize:11.5, color:"var(--ink-3)", fontFamily:"var(--font-mono)"}}>{c.phone}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="muted">{c.area}</td>
+                  <td><span className={`chip ${tierColor(c.tier)}`}>{c.tier}</span></td>
+                  <td className="num cell-pri" style={{fontFamily:"var(--font-mono)"}}>{baht(c.ytd)}</td>
+                  <td className="muted cell-mono" style={{fontSize:12}}>{c.last}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{display:"flex", flexDirection:"column", gap:14}}>
+          <div className="card">
+            <div className="card-pad">
+              <div style={{display:"flex", alignItems:"center", gap:14, marginBottom:14}}>
+                <div className="user-avatar" style={{width:56, height:56, fontSize:18}}>{cur.name.split(" ").map(w=>w[0]).slice(0,2).join("")}</div>
+                <div>
+                  <div style={{fontSize:11, fontFamily:"var(--font-mono)", color:"var(--ink-3)"}}>{cur.id}</div>
+                  <div style={{fontSize:18, fontWeight:600}}>{cur.name}</div>
+                  <div style={{display:"flex", gap:6, marginTop:4}}>
+                    <span className={`chip ${tierColor(cur.tier)}`}>{cur.tier}</span>
+                    <span className="chip">{cur.area}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{display:"flex", flexDirection:"column", gap:8, fontSize:13}}>
+                <div style={{display:"flex", justifyContent:"space-between", color:"var(--ink-3)"}}>
+                  <span>โทรศัพท์</span>
+                  <span style={{color:"var(--ink)", fontFamily:"var(--font-mono)"}}>{cur.phone}</span>
+                </div>
+                <div style={{display:"flex", justifyContent:"space-between", color:"var(--ink-3)"}}>
+                  <span>เครดิต</span>
+                  <span style={{color:"var(--ink)"}}>{cur.tier === "VIP" ? "30 วัน" : cur.tier === "ขายส่ง" ? "7 วัน" : "เงินสด"}</span>
+                </div>
+                <div style={{display:"flex", justifyContent:"space-between", color:"var(--ink-3)"}}>
+                  <span>ครั้งล่าสุด</span>
+                  <span style={{color:"var(--ink)", fontFamily:"var(--font-mono)"}}>{cur.last}</span>
+                </div>
+              </div>
+              <div style={{display:"flex", gap:8, marginTop:14}}>
+                <button className="btn" style={{flex:1}}><Icon name="phone" size={14}/>โทร</button>
+                <button className="btn btn-accent" style={{flex:1}}><Icon name="out" size={14}/>เปิดบิล</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-pad">
+              <div className="card-title" style={{fontSize:13, marginBottom:10}}>ยอดซื้อ 6 เดือนล่าสุด</div>
+              <BarChart
+                data={["ธ.ค.","ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค."].map((m, i) => ({
+                  label: m,
+                  value: Math.round(cur.ytd / 6 * (0.6 + Math.random() * 0.8) / 1000),
+                }))}
+                height={140}
+                color="var(--accent)"
+              />
+              <div style={{textAlign:"center", fontSize:11, color:"var(--ink-3)", marginTop:6}}>(พันบาท)</div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-head">
+              <div className="card-title">สินค้าที่ซื้อบ่อย</div>
+            </div>
+            <div className="card-pad" style={{display:"flex", flexDirection:"column", gap:10}}>
+              {PRODUCTS.slice(0, 4).map((p, i) => {
+                const pct = [85, 62, 41, 28][i];
+                return (
+                  <div key={p.sku}>
+                    <div style={{display:"flex", justifyContent:"space-between", marginBottom:5, fontSize:13}}>
+                      <span>{p.name}</span>
+                      <span className="cell-mono muted">{Math.round(pct * 1.2)}×</span>
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{width: pct + "%", transitionDelay: (i*0.08)+"s"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ====================================================================
+   Daily Sales Report (รายงานขาย-วัน)
+   ==================================================================== */
+function PageSales({ orders }) {
+  const [date, setDate] = useState("วันนี้ · 8 พ.ค. 2569");
+
+  const totalRev = orders.reduce((s,o) => s + o.total, 0);
+  const totalOrders = orders.length;
+  const avg = totalRev / Math.max(1, totalOrders);
+  const totalItems = orders.reduce((s,o) => s + o.items.reduce((s2,[,q]) => s2+q, 0), 0);
+
+  // top products
+  const productSales = useMemo(() => {
+    const map = {};
+    orders.forEach(o => o.items.forEach(([sku, q]) => {
+      const key = sku === "YP-50" ? "YP-050" : sku;
+      const p = PRODUCTS.find(x => x.sku === key);
+      if (!p) return;
+      map[key] = map[key] || { sku: key, name: p.name, qty: 0, rev: 0 };
+      map[key].qty += q;
+      map[key].rev += p.price * q;
+    }));
+    return Object.values(map).sort((a,b) => b.rev - a.rev);
+  }, [orders]);
+
+  const hourlyData = useMemo(() => {
+    const buckets = {};
+    for (let h = 8; h <= 19; h++) buckets[h] = 0;
+    orders.forEach(o => {
+      const h = new Date(o.ts).getHours();
+      if (buckets[h] !== undefined) buckets[h] += o.total;
+    });
+    return Object.entries(buckets).map(([h, v]) => ({ label: String(h).padStart(2,"0"), value: Math.round(v/1000) }));
+  }, [orders]);
+
+  // payment breakdown
+  const payments = useMemo(() => {
+    const map = {};
+    orders.forEach(o => { map[o.pay] = (map[o.pay] || 0) + o.total; });
+    return Object.entries(map).map(([k,v]) => ({ label: k, value: v }));
+  }, [orders]);
+
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">รายงานขาย — {date}</h1>
+          <div className="page-sub">สรุปยอดขายและรายการที่เกิดขึ้นในวันนี้</div>
+        </div>
+        <div className="page-actions">
+          <div className="seg">
+            <button className="on">วันนี้</button>
+            <button>เมื่อวาน</button>
+            <button>เลือกวัน</button>
+          </div>
+          <button className="btn"><Icon name="calendar" size={15}/>{date}</button>
+          <button className="btn btn-primary"><Icon name="download" size={15}/>ปิดยอดวัน</button>
+        </div>
+      </div>
+
+      <div className="kpi-grid stagger">
+        <div className="kpi">
+          <div className="kpi-label"><span className="dot-icon"></span>ยอดขายรวม</div>
+          <div className="kpi-value"><Counter value={totalRev} prefix="฿"/></div>
+          <div className="kpi-foot">
+            <span className="kpi-trend up"><Icon name="trend-up" size={11} stroke={2.4}/>+18.2%</span>
+            <span className="kpi-meta">vs. เมื่อวาน</span>
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label"><span className="dot-icon" style={{background:"var(--success)"}}></span>จำนวนบิล</div>
+          <div className="kpi-value"><Counter value={totalOrders}/><span className="unit">บิล</span></div>
+          <div className="kpi-foot">
+            <span className="kpi-trend up"><Icon name="trend-up" size={11} stroke={2.4}/>+3</span>
+            <span className="kpi-meta">บิลล่าสุด {tHHMM(orders[0]?.ts || Date.now())}</span>
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label"><span className="dot-icon" style={{background:"var(--info)"}}></span>ค่าเฉลี่ย/บิล</div>
+          <div className="kpi-value"><Counter value={avg} prefix="฿"/></div>
+          <div className="kpi-foot">
+            <span className="kpi-trend up"><Icon name="trend-up" size={11} stroke={2.4}/>+12%</span>
+            <span className="kpi-meta">บิลใหญ่สุด {baht(Math.max(...orders.map(o=>o.total)))}</span>
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label"><span className="dot-icon" style={{background:"var(--warn)"}}></span>หน่วยที่ขายได้</div>
+          <div className="kpi-value"><Counter value={totalItems}/><span className="unit">หน่วย</span></div>
+          <div className="kpi-foot">
+            <span className="kpi-meta">ใน {productSales.length} SKU</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid-2-1 mb-md" style={{marginBottom:16}}>
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <div className="card-title">ยอดขายตามชั่วโมง</div>
+              <div className="card-sub">หน่วย: พันบาท</div>
+            </div>
+          </div>
+          <div className="card-pad">
+            <BarChart data={hourlyData} height={220} color="var(--accent)"/>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">ช่องทางชำระเงิน</div>
+          </div>
+          <div className="card-pad" style={{display:"flex", flexDirection:"column", gap:14}}>
+            {payments.map((p, i) => {
+              const pct = (p.value / totalRev) * 100;
+              const colors = ["var(--accent)","var(--info)","var(--success)"];
+              return (
+                <div key={p.label}>
+                  <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
+                    <span style={{fontSize:13, fontWeight:500}}>{p.label}</span>
+                    <span className="cell-mono">{baht(p.value)} · {pct.toFixed(1)}%</span>
+                  </div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{width:pct+"%", background: colors[i%3], transitionDelay: (i*0.08)+"s"}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid-2-1">
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">รายการบิลวันนี้</div>
+            <button className="btn btn-ghost btn-sm">พิมพ์รายงาน</button>
+          </div>
+          <table className="table">
+            <thead><tr>
+              <th>เวลา</th><th>เลขที่</th><th>ลูกค้า</th><th>รายการ</th><th>ชำระ</th><th className="num">ยอด</th>
+            </tr></thead>
+            <tbody className="stagger">
+              {orders.map(o => {
+                const c = CUSTOMERS.find(x => x.id === o.cust);
+                const items = o.items.reduce((s,[,q])=>s+q, 0);
+                return (
+                  <tr key={o.id}>
+                    <td className="cell-mono muted">{tHHMM(o.ts)}</td>
+                    <td className="cell-mono">{o.id}</td>
+                    <td className="cell-pri">{c?.name}</td>
+                    <td className="muted">{o.items.length} SKU · {items} หน่วย</td>
+                    <td><span className="chip">{o.pay}</span></td>
+                    <td className="num cell-pri" style={{fontFamily:"var(--font-mono)"}}>{baht(o.total)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">สินค้าขายดี</div>
+            <span className="chip accent">Top 5</span>
+          </div>
+          <div className="card-pad" style={{display:"flex", flexDirection:"column", gap:14}}>
+            {productSales.slice(0, 5).map((p, i) => {
+              const pct = (p.rev / productSales[0].rev) * 100;
+              return (
+                <div key={p.sku} style={{display:"grid", gridTemplateColumns:"24px 1fr auto", gap:10, alignItems:"center"}}>
+                  <div style={{
+                    width:22, height:22, borderRadius:6,
+                    background: i === 0 ? "var(--accent)" : "var(--surface-3)",
+                    color: i === 0 ? "white" : "var(--ink-2)",
+                    display:"grid", placeItems:"center", fontSize:11, fontWeight:700, fontFamily:"var(--font-mono)"
+                  }}>{i+1}</div>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:13, fontWeight:500, whiteSpace:"nowrap", textOverflow:"ellipsis", overflow:"hidden"}}>{p.name}</div>
+                    <div className="bar-track" style={{marginTop:5}}>
+                      <div className="bar-fill" style={{width:pct+"%", transitionDelay:(i*0.08)+"s"}}/>
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div className="cell-mono cell-pri">{baht(p.rev)}</div>
+                    <div className="cell-mono muted" style={{fontSize:11}}>{p.qty} ชิ้น</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ====================================================================
+   Inventory Report (รายงานสินค้าคงเหลือ)
+   ==================================================================== */
+function PageInventoryReport({ stock }) {
+  const [view, setView] = useState("matrix"); // matrix | summary
+
+  const rows = PRODUCTS.map(p => {
+    const total = stockTotal(stock, p.sku);
+    return {
+      ...p,
+      total,
+      lvl: stockLevel(total, p.reorder),
+      value: total * p.cost,
+      byLoc: LOCATIONS.reduce((m, l) => ({ ...m, [l.code]: stock[p.sku]?.[l.code] || 0 }), {}),
+    };
+  });
+
+  const totalUnits = rows.reduce((s,r)=>s+r.total, 0);
+  const totalValue = rows.reduce((s,r)=>s+r.value, 0);
+
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">รายงานสินค้าคงเหลือ</h1>
+          <div className="page-sub">รวม {PRODUCTS.length} SKU · {fmt(totalUnits)} หน่วย · มูลค่า {baht(totalValue)} · ณ {tDateTH(Date.now())} {tHHMM(Date.now())}</div>
+        </div>
+        <div className="page-actions">
+          <div className="seg">
+            <button className={view==="matrix"?"on":""} onClick={()=>setView("matrix")}>Matrix</button>
+            <button className={view==="summary"?"on":""} onClick={()=>setView("summary")}>สรุป</button>
+          </div>
+          <button className="btn"><Icon name="filter" size={15}/>กรอง</button>
+          <button className="btn btn-primary"><Icon name="download" size={15}/>ส่งออก</button>
+        </div>
+      </div>
+
+      <div className="kpi-grid stagger">
+        <div className="kpi">
+          <div className="kpi-label"><span className="dot-icon"></span>SKU ทั้งหมด</div>
+          <div className="kpi-value"><Counter value={PRODUCTS.length}/></div>
+          <div className="kpi-foot"><span className="kpi-meta">ใน {LOCATIONS.length} location</span></div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label"><span className="dot-icon" style={{background:"var(--success)"}}></span>หน่วยรวม</div>
+          <div className="kpi-value"><Counter value={totalUnits}/></div>
+          <div className="kpi-foot"><span className="kpi-meta">หน่วยในระบบ</span></div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label"><span className="dot-icon" style={{background:"var(--info)"}}></span>มูลค่ารวม (ต้นทุน)</div>
+          <div className="kpi-value"><Counter value={totalValue} prefix="฿"/></div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label"><span className="dot-icon" style={{background:"var(--warn)"}}></span>ใกล้หมด / หมด</div>
+          <div className="kpi-value">
+            <Counter value={rows.filter(r=>r.lvl==="low").length}/>
+            <span style={{color:"var(--ink-3)", margin:"0 6px"}}>/</span>
+            <Counter value={rows.filter(r=>r.lvl==="out").length}/>
+          </div>
+          <div className="kpi-foot"><span className="kpi-meta">ใกล้หมด / หมดสต๊อก</span></div>
+        </div>
+      </div>
+
+      {view === "matrix" ? (
+        <div className="card" style={{overflow:"auto"}}>
+          <table className="table" style={{minWidth:900}}>
+            <thead>
+              <tr>
+                <th style={{position:"sticky", left:0, background:"var(--surface)", zIndex:1}}>SKU</th>
+                <th style={{position:"sticky", left:80, background:"var(--surface)", zIndex:1}}>สินค้า</th>
+                {LOCATIONS.map(l => <th key={l.code} className="num" title={l.name}>{l.code}</th>)}
+                <th className="num">รวม</th>
+                <th className="num">มูลค่า</th>
+                <th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody className="stagger">
+              {rows.map(r => (
+                <tr key={r.sku}>
+                  <td className="cell-mono muted" style={{position:"sticky", left:0, background:"var(--bg-elevated)"}}>{r.sku}</td>
+                  <td className="cell-pri" style={{position:"sticky", left:80, background:"var(--bg-elevated)"}}>{r.name}</td>
+                  {LOCATIONS.map(l => {
+                    const q = r.byLoc[l.code];
+                    const max = Math.max(...LOCATIONS.map(x => r.byLoc[x.code]), 1);
+                    const intensity = q / max;
+                    return (
+                      <td key={l.code} className="num" style={{
+                        background: q > 0 ? `oklch(0.62 ${0.04 + intensity * 0.13} 38 / ${0.08 + intensity * 0.18})` : "transparent",
+                        fontFamily:"var(--font-mono)",
+                        color: q === 0 ? "var(--ink-4)" : "var(--ink)",
+                        fontWeight: q > 0 ? 600 : 400,
+                      }}>{q}</td>
+                    );
+                  })}
+                  <td className="num cell-pri" style={{fontFamily:"var(--font-mono)"}}>{r.total}</td>
+                  <td className="num muted">{baht(r.value)}</td>
+                  <td><span className={`chip stock-pill`} data-level={r.lvl}>{r.lvl === "ok" ? "ปกติ" : r.lvl === "low" ? "ใกล้หมด" : "หมด"}</span></td>
+                </tr>
+              ))}
+              <tr style={{background:"var(--surface)", fontWeight:600}}>
+                <td colSpan="2" className="cell-pri" style={{position:"sticky", left:0, background:"var(--surface)"}}>รวมทั้งหมด</td>
+                {LOCATIONS.map(l => (
+                  <td key={l.code} className="num" style={{fontFamily:"var(--font-mono)"}}>
+                    {fmt(rows.reduce((s,r)=>s+r.byLoc[l.code],0))}
+                  </td>
+                ))}
+                <td className="num" style={{fontFamily:"var(--font-mono)"}}>{fmt(totalUnits)}</td>
+                <td className="num">{baht(totalValue)}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid-2">
+          <div className="card">
+            <div className="card-head"><div className="card-title">สรุปตามหมวดสินค้า</div></div>
+            <div className="card-pad" style={{display:"flex", flexDirection:"column", gap:14}}>
+              {Array.from(new Set(PRODUCTS.map(p => p.cat))).map((cat, i) => {
+                const inCat = rows.filter(r => r.cat === cat);
+                const units = inCat.reduce((s,r)=>s+r.total,0);
+                const value = inCat.reduce((s,r)=>s+r.value,0);
+                const pct = (value / totalValue) * 100;
+                return (
+                  <div key={cat}>
+                    <div style={{display:"flex", justifyContent:"space-between", marginBottom:6, fontSize:13}}>
+                      <span style={{fontWeight:500}}>{cat} <span style={{color:"var(--ink-3)", fontWeight:400}}>· {inCat.length} SKU</span></span>
+                      <span className="cell-mono">{fmt(units)} · {baht(value)}</span>
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{width:pct+"%", transitionDelay:(i*0.08)+"s"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-head"><div className="card-title">สรุปตาม Location</div></div>
+            <div className="card-pad" style={{display:"flex", flexDirection:"column", gap:14}}>
+              {LOCATIONS.map((l, i) => {
+                const units = rows.reduce((s,r)=>s+r.byLoc[l.code], 0);
+                const value = rows.reduce((s,r)=>s+r.byLoc[l.code]*r.cost, 0);
+                const util = Math.min(100, units / l.capacity * 100);
+                return (
+                  <div key={l.code}>
+                    <div style={{display:"flex", justifyContent:"space-between", marginBottom:6, fontSize:13}}>
+                      <span style={{fontWeight:500}}>{l.name}</span>
+                      <span className="cell-mono">{fmt(units)} หน่วย · {baht(value)}</span>
+                    </div>
+                    <div className="bar-track">
+                      <div className={`bar-fill ${util > 85 ? "warn" : ""}`} style={{width:util+"%", transitionDelay:(i*0.07)+"s"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ====================================================================
+   Movement Report (รายงานเคลื่อนไหว)
+   ==================================================================== */
+function PageMovementReport({ movs }) {
+  const [type, setType] = useState("ทั้งหมด");
+  const [q, setQ] = useState("");
+
+  const filtered = movs.filter(m => {
+    if (type !== "ทั้งหมด") {
+      const map = { "รับเข้า":"in","เบิกออก":"out","ย้าย":"mov","ปรับ":"adj" };
+      if (m.type !== map[type]) return false;
+    }
+    if (q) {
+      const p = PRODUCTS.find(x => x.sku === m.sku);
+      const blob = (m.ref + " " + (p?.name||"") + " " + m.from + " " + m.to + " " + m.sku).toLowerCase();
+      if (!blob.includes(q.toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  const summary = useMemo(() => {
+    const ins = movs.filter(m=>m.type==="in").reduce((s,m)=>s+m.qty,0);
+    const outs = movs.filter(m=>m.type==="out").reduce((s,m)=>s+m.qty,0);
+    const movsCount = movs.filter(m=>m.type==="mov").length;
+    const adj = movs.filter(m=>m.type==="adj").length;
+    return { ins, outs, movsCount, adj };
+  }, [movs]);
+
+  // group by date
+  const grouped = useMemo(() => {
+    const g = {};
+    filtered.forEach(m => {
+      const d = new Date(m.ts);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      g[key] = g[key] || { label: tDateTH(m.ts), items: [] };
+      g[key].items.push(m);
+    });
+    return Object.values(g);
+  }, [filtered]);
+
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">รายงานการเคลื่อนไหว</h1>
+          <div className="page-sub">บันทึกทุกการเคลื่อนไหวของสินค้า — รับ, เบิก, ย้าย, ปรับ</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn"><Icon name="calendar" size={15}/>7 วันล่าสุด</button>
+          <button className="btn btn-primary"><Icon name="download" size={15}/>ส่งออก</button>
+        </div>
+      </div>
+
+      <div className="grid-4 mb-md stagger" style={{marginBottom:18}}>
+        <div className="kpi" style={{cursor:"default"}}>
+          <div className="kpi-label" style={{color:"var(--success)"}}>รับเข้า</div>
+          <div className="kpi-value" style={{color:"var(--success)"}}>+<Counter value={summary.ins}/></div>
+          <div className="kpi-foot"><span className="kpi-meta">{movs.filter(m=>m.type==="in").length} รายการ</span></div>
+        </div>
+        <div className="kpi" style={{cursor:"default"}}>
+          <div className="kpi-label" style={{color:"var(--danger)"}}>เบิกออก</div>
+          <div className="kpi-value" style={{color:"var(--danger)"}}>−<Counter value={summary.outs}/></div>
+          <div className="kpi-foot"><span className="kpi-meta">{movs.filter(m=>m.type==="out").length} รายการ</span></div>
+        </div>
+        <div className="kpi" style={{cursor:"default"}}>
+          <div className="kpi-label" style={{color:"oklch(0.45 0.13 70)"}}>ย้ายภายใน</div>
+          <div className="kpi-value"><Counter value={summary.movsCount}/></div>
+          <div className="kpi-foot"><span className="kpi-meta">โอนระหว่าง location</span></div>
+        </div>
+        <div className="kpi" style={{cursor:"default"}}>
+          <div className="kpi-label" style={{color:"var(--info)"}}>ปรับสต๊อก</div>
+          <div className="kpi-value"><Counter value={summary.adj}/></div>
+          <div className="kpi-foot"><span className="kpi-meta">นับ/แก้ไข</span></div>
+        </div>
+      </div>
+
+      <div className="card mb-md" style={{marginBottom:14}}>
+        <div className="card-pad" style={{display:"flex", gap:10, alignItems:"center", flexWrap:"wrap"}}>
+          <div className="input-prefix" style={{flex:1, minWidth:240}}>
+            <span className="prefix-icon"><Icon name="search" size={15}/></span>
+            <input className="input" placeholder="ค้นหา SKU, ชื่อสินค้า, เลขที่เอกสาร, location..." value={q} onChange={e=>setQ(e.target.value)}/>
+          </div>
+          <div className="seg">
+            {["ทั้งหมด","รับเข้า","เบิกออก","ย้าย","ปรับ"].map(t => (
+              <button key={t} className={type===t?"on":""} onClick={()=>setType(t)}>{t}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        {grouped.map((g, gi) => (
+          <div key={gi}>
+            <div style={{
+              padding: "10px 16px",
+              background: "var(--surface)",
+              borderBottom: "1px solid var(--line)",
+              borderTop: gi > 0 ? "1px solid var(--line)" : "none",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "var(--ink-3)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              fontFamily: "var(--font-mono)",
+              display: "flex",
+              justifyContent: "space-between",
+            }}>
+              <span>{g.label}</span>
+              <span>{g.items.length} รายการ</span>
+            </div>
+            {g.items.map(m => {
+              const p = PRODUCTS.find(x => x.sku === m.sku);
+              const pos = m.type === "in" ? +m.qty : m.type === "out" ? -m.qty : 0;
+              return (
+                <div key={m.id} className="mov-row" style={{gridTemplateColumns:"60px 28px 100px 1fr 200px auto"}}>
+                  <div className="mov-time">{tHHMM(m.ts)}</div>
+                  <div className={`mov-icon ${m.type}`}>{m.type === "in" ? "↓" : m.type === "out" ? "↑" : m.type === "mov" ? "⇄" : "±"}</div>
+                  <div><span className="cell-mono" style={{fontSize:11.5, color:"var(--ink-3)"}}>{m.ref}</span></div>
+                  <div className="mov-text">
+                    <div className="label">{p?.name}</div>
+                    <div className="meta cell-mono" style={{fontSize:11}}>{m.sku}</div>
+                  </div>
+                  <div style={{fontSize:12.5, color:"var(--ink-3)"}}>
+                    <span style={{color:"var(--ink)"}}>{m.from}</span>
+                    <span style={{margin:"0 6px"}}>→</span>
+                    <span style={{color:"var(--ink)"}}>{m.to}</span>
+                    <div style={{fontSize:11, marginTop:2}}>โดย {m.by}</div>
+                  </div>
+                  <div className={`mov-amt ${pos>0?"pos":pos<0?"neg":""}`} style={{minWidth:60}}>{pos>0?"+":""}{m.qty}</div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        {grouped.length === 0 && <div className="empty"><div className="empty-icon"><Icon name="shuffle"/></div>ไม่พบรายการที่ตรงกับเงื่อนไข</div>}
+      </div>
+    </div>
+  );
+}
+
+window.IM_Pages3 = { PageCustomers, PageSales, PageInventoryReport, PageMovementReport };
