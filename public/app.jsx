@@ -63,7 +63,20 @@ function App() {
 
   const loadDataFromSupabase = async () => {
     try {
-      // Use seed data for now (fallback if Supabase doesn't work)
+      // Try to load from localStorage first
+      const saved = localStorage.getItem('appData');
+      if (saved) {
+        const data = JSON.parse(saved);
+        setStock(data.stock || {});
+        setMovs(data.movs || []);
+        setOrders(data.orders || []);
+        setProducts(data.products || []);
+        setCustomers(data.customers || []);
+        setLocations(data.locations || []);
+        return;
+      }
+
+      // Fall back to seed data
       const stock = seedStock();
       setStock(stock);
       setMovs(seedMovements());
@@ -75,6 +88,12 @@ function App() {
       console.error('Failed to load data:', err);
     }
   };
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    const appData = { stock, movs, orders, products, customers, locations };
+    localStorage.setItem('appData', JSON.stringify(appData));
+  }, [stock, movs, orders, products, customers, locations]);
 
   const handleAuthSuccess = (authUser) => {
     setUser(authUser);
