@@ -81,31 +81,14 @@ function App() {
 
   const loadDataFromSupabase = async () => {
     try {
-      // Fetch all data in parallel
-      const [stockRes, customersRes, locationsRes, movementsRes, ordersRes, productsRes] = await Promise.all([
-        supabase.from('stock').select('*'),
-        supabase.from('customers').select('*'),
-        supabase.from('locations').select('*'),
-        supabase.from('movements').select('*').order('ts', { ascending: false }).limit(100),
-        supabase.from('orders').select('*').order('ts', { ascending: false }).limit(50),
-        supabase.from('products').select('*').order('sku'),
-      ]);
-
-      // Transform stock to {sku: {location: qty}}
-      const stockMap = {};
-      if (stockRes.data) {
-        stockRes.data.forEach(item => {
-          if (!stockMap[item.sku]) stockMap[item.sku] = {};
-          stockMap[item.sku][item.location_code] = item.quantity;
-        });
-      }
-      setStock(stockMap);
-
-      if (customersRes.data) setCustomers(customersRes.data);
-      if (locationsRes.data) setLocations(locationsRes.data);
-      if (movementsRes.data) setMovs(movementsRes.data);
-      if (ordersRes.data) setOrders(ordersRes.data);
-      if (productsRes.data) setProducts(productsRes.data);
+      // Use seed data for now (fallback if Supabase doesn't work)
+      const stock = seedStock();
+      setStock(stock);
+      setMovs(seedMovements());
+      setOrders(seedTodayOrders());
+      setProducts(window.IM.PRODUCTS || []);
+      setCustomers(window.IM.CUSTOMERS || []);
+      setLocations(window.IM.LOCATIONS || []);
     } catch (err) {
       console.error('Failed to load data:', err);
     }
