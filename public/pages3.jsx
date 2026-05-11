@@ -279,7 +279,7 @@ function PageSales({ orders }) {
   const totalItems = filteredOrders.reduce((s,o) => s + o.items.reduce((s2,[,q]) => s2+q, 0), 0);
 
   // top products
-  const productSales = useMemo(() => {
+  const getProductSales = () => {
     const map = {};
     filteredOrders.forEach(o => o.items.forEach(([sku, q]) => {
       const key = sku === "YP-50" ? "YP-050" : sku;
@@ -290,9 +290,10 @@ function PageSales({ orders }) {
       map[key].rev += p.price * q;
     }));
     return Object.values(map).sort((a,b) => b.rev - a.rev);
-  }, [filteredOrders]);
+  };
+  const productSales = getProductSales();
 
-  const hourlyData = useMemo(() => {
+  const getHourlyData = () => {
     const buckets = {};
     for (let h = 8; h <= 19; h++) buckets[h] = 0;
     filteredOrders.forEach(o => {
@@ -300,14 +301,16 @@ function PageSales({ orders }) {
       if (buckets[h] !== undefined) buckets[h] += o.total;
     });
     return Object.entries(buckets).map(([h, v]) => ({ label: String(h).padStart(2,"0"), value: Math.round(v/1000) }));
-  }, [filteredOrders]);
+  };
+  const hourlyData = getHourlyData();
 
   // payment breakdown
-  const payments = useMemo(() => {
+  const getPayments = () => {
     const map = {};
     filteredOrders.forEach(o => { map[o.pay] = (map[o.pay] || 0) + o.total; });
     return Object.entries(map).map(([k,v]) => ({ label: k, value: v }));
-  }, [filteredOrders]);
+  };
+  const payments = getPayments();
 
   return (
     <div className="page">
