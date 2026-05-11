@@ -82,18 +82,29 @@ function App() {
   };
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setStock({});
-      setMovs([]);
-      setOrders([]);
-      setCustomers([]);
-      setLocations([]);
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+    setUser(null);
+    setStock({});
+    setMovs([]);
+    setOrders([]);
+    setCustomers([]);
+    setLocations([]);
   };
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", t.theme);
+  }, [t.theme]);
+
+  useEffect(() => {
+    if (t.accent) document.documentElement.style.setProperty("--accent", t.accent);
+  }, [t.accent]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-density", t.density);
+  }, [t.density]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-live-dots", t.showLiveDots ? "on" : "off");
+  }, [t.showLiveDots]);
 
   if (loading) {
     return (
@@ -112,35 +123,14 @@ function App() {
     );
   }
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", t.theme);
-  }, [t.theme]);
-
-  useEffect(() => {
-    if (t.accent) document.documentElement.style.setProperty("--accent", t.accent);
-  }, [t.accent]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-density", t.density);
-  }, [t.density]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-live-dots", t.showLiveDots ? "on" : "off");
-  }, [t.showLiveDots]);
-
-  const addMov = useCallback(async (m) => {
+  const addMov = useCallback((m) => {
     const movRecord = {
       mov_id: "M" + Date.now(),
       ts: Date.now(),
       by_operator: user?.email || "unknown",
       ...m,
     };
-    try {
-      await supabase.from('movements').insert([movRecord]);
-      setMovs(prev => [movRecord, ...prev]);
-    } catch (err) {
-      console.error('Failed to save movement:', err);
-    }
+    setMovs(prev => [movRecord, ...prev]);
   }, [user]);
 
   const go = useCallback((p) => {
