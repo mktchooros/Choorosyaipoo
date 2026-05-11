@@ -176,7 +176,7 @@ function App() {
     case "receive":    pageEl = <PageReceive stock={stock} setStock={setStock} addMov={addMov} recents={movs} locations={locations}/>; break;
     case "issue":      pageEl = <PageIssue stock={stock} setStock={setStock} addMov={addMov} recents={movs} customers={customers} locations={locations}/>; break;
     case "stock":      pageEl = <PageStock stock={stock} setStock={setStock} go={go} openItem={openItem}/>; break;
-    case "itemDetail": pageEl = <PageItemDetail sku={itemSku} stock={stock} setStock={setStock} movs={movs} back={() => go("stock")}/>; break;
+    case "itemDetail": pageEl = <PageItemDetail sku={itemSku} stock={stock} setStock={setStock} setLocations={setLocations} movs={movs} back={() => go("stock")}/>; break;
     case "locations":  pageEl = <PageLocations stock={stock} movs={movs} locations={locations} setLocations={setLocations}/>; break;
     case "customers":  pageEl = <PageCustomers customers={customers} setCustomers={setCustomers}/>; break;
     case "products":   pageEl = <PageProducts/>; break;
