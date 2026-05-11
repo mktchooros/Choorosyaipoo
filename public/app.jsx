@@ -59,25 +59,7 @@ function App() {
     init();
   }, []);
 
-  // Subscribe to real-time updates
-  useEffect(() => {
-    if (!user) return;
-
-    const stockSub = supabase
-      .from('stock')
-      .on('*', () => loadDataFromSupabase())
-      .subscribe();
-
-    const movementsSub = supabase
-      .from('movements')
-      .on('*', () => loadDataFromSupabase())
-      .subscribe();
-
-    return () => {
-      supabase.removeSubscription(stockSub);
-      supabase.removeSubscription(movementsSub);
-    };
-  }, [user]);
+  // Real-time updates disabled for now
 
   const loadDataFromSupabase = async () => {
     try {
