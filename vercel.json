@@ -1,10 +1,7 @@
 {
-  "buildCommand": "echo 'Static site - no build needed'",
-  "outputDirectory": "public",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "buildCommand": "npm install",
+  "outputDirectory": "./",
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
