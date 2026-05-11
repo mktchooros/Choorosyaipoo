@@ -1,4 +1,10 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "buildCommand": "echo 'Static site - no build needed'",
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
