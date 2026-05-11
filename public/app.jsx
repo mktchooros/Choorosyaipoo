@@ -44,22 +44,19 @@ function App() {
   const [products, setProducts] = useState([]);
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
 
-  // Check authentication on mount
+  // Load data on mount (skip auth for now)
   useEffect(() => {
-    const checkAuth = async () => {
+    const init = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUser(user);
-          await loadDataFromSupabase();
-        }
+        setUser({ email: 'demo@test.com' });
+        await loadDataFromSupabase();
       } catch (err) {
-        console.error('Auth check failed:', err);
+        console.error('Load failed:', err);
       } finally {
         setLoading(false);
       }
     };
-    checkAuth();
+    init();
   }, []);
 
   // Subscribe to real-time updates
@@ -148,10 +145,6 @@ function App() {
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
   }
 
   useEffect(() => {
