@@ -1,4 +1,4 @@
-/* global React, ReactDOM */
+/* global React, ReactDOM, supabase, AuthPage */
 const { useState, useEffect, useCallback, useMemo } = React;
 const { Icon, ToastHost, seedStock, seedMovements, seedTodayOrders } = window.IM;
 const { TweaksPanel, useTweaks, TweakSection, TweakRadio, TweakColor, TweakToggle } = window;
@@ -31,15 +31,128 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState("dashboard");
   const [itemSku, setItemSku] = useState(null);
   const [scanOpen, setScanOpen] = useState(false);
-  const [stock, setStock] = useState(seedStock);
-  const [movs, setMovs] = useState(seedMovements);
-  const [orders] = useState(seedTodayOrders);
-  const [customers, setCustomers] = useState(window.IM.CUSTOMERS);
-  const [locations, setLocations] = useState(window.IM.LOCATIONS);
+  const [stock, setStock] = useState({});
+  const [movs, setMovs] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [products, setProducts] = useState([]);
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUser(user);
+          await loadDataFromSupabase();
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const stockSub = supabase
+      .from('stock')
+      .on('*', () => loadDataFromSupabase())
+      .subscribe();
+
+    const movementsSub = supabase
+      .from('movements')
+      .on('*', () => loadDataFromSupabase())
+      .subscribe();
+
+    return () => {
+      supabase.removeSubscription(stockSub);
+      supabase.removeSubscription(movementsSub);
+    };
+  }, [user]);
+
+  const loadDataFromSupabase = async () => {
+    try {
+      // Fetch all data in parallel
+      const [stockRes, customersRes, locationsRes, movementsRes, ordersRes, productsRes] = await Promise.all([
+        supabase.from('stock').select('*'),
+        supabase.from('customers').select('*'),
+        supabase.from('locations').select('*'),
+        supabase.from('movements').select('*').order('ts', { ascending: false }).limit(100),
+        supabase.from('orders').select('*').order('ts', { ascending: false }).limit(50),
+        supabase.from('products').select('*').order('sku'),
+      ]);
+
+      // Transform stock to {sku: {location: qty}}
+      const stockMap = {};
+      if (stockRes.data) {
+        stockRes.data.forEach(item => {
+          if (!stockMap[item.sku]) stockMap[item.sku] = {};
+          stockMap[item.sku][item.location_code] = item.quantity;
+        });
+      }
+      setStock(stockMap);
+
+      if (customersRes.data) setCustomers(customersRes.data);
+      if (locationsRes.data) setLocations(locationsRes.data);
+      if (movementsRes.data) setMovs(movementsRes.data);
+      if (ordersRes.data) setOrders(ordersRes.data);
+      if (productsRes.data) setProducts(productsRes.data);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+    }
+  };
+
+  const handleAuthSuccess = (authUser) => {
+    setUser(authUser);
+    loadDataFromSupabase();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setStock({});
+      setMovs([]);
+      setOrders([]);
+      setCustomers([]);
+      setLocations([]);
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #D85C36 0%, #F5A580 100%)',
+        fontFamily: 'IBM Plex Sans Thai, sans-serif'
+      }}>
+        <div style={{ color: 'white', fontSize: '18px' }}>
+          กำลังโหลด...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
+  }
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", t.theme);
@@ -57,14 +170,20 @@ function App() {
     document.documentElement.setAttribute("data-live-dots", t.showLiveDots ? "on" : "off");
   }, [t.showLiveDots]);
 
-  const addMov = useCallback((m) => {
-    setMovs(prev => [{
-      id: "M" + Date.now(),
+  const addMov = useCallback(async (m) => {
+    const movRecord = {
+      mov_id: "M" + Date.now(),
       ts: Date.now(),
-      by: "ยายปู",
+      by_operator: user?.email || "unknown",
       ...m,
-    }, ...prev]);
-  }, []);
+    };
+    try {
+      await supabase.from('movements').insert([movRecord]);
+      setMovs(prev => [movRecord, ...prev]);
+    } catch (err) {
+      console.error('Failed to save movement:', err);
+    }
+  }, [user]);
 
   const go = useCallback((p) => {
     setPage(p);
@@ -78,12 +197,12 @@ function App() {
 
   const lowCount = useMemo(() => {
     let n = 0;
-    window.IM.PRODUCTS.forEach(p => {
+    (products || []).forEach(p => {
       const total = Object.values(stock[p.sku] || {}).reduce((s, v) => s + v, 0);
       if (total <= p.reorder) n++;
     });
     return n;
-  }, [stock]);
+  }, [stock, products]);
 
   const sections = [...new Set(NAV.map(n => n.section))];
 
@@ -187,6 +306,9 @@ function App() {
               </button>
               <button className="btn btn-accent btn-sm" onClick={() => go("receive")}>
                 <Icon name="plus" size={14}/> บันทึกใหม่
+              </button>
+              <button className="btn btn-sm" onClick={handleLogout} title="ออกจากระบบ" style={{marginLeft: 'auto'}}>
+                <Icon name="settings" size={14}/> ออกจากระบบ
               </button>
             </div>
           </div>

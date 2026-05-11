@@ -68,7 +68,11 @@
       "Bash(git remote *)",
       "Bash(git branch *)",
       "Bash(git push *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(gunzip -c \"C:\\\\Users\\\\prim\\\\.claude\\\\projects\\\\C--Users-prim-Desktop-------------------\\\\de598666-711c-4b65-a948-294738ac0727\\\\tool-results\\\\webfetch-1778462941603-h44738.bin\")",
+      "Bash(tar -xf -)",
+      "WebSearch",
+      "Bash(grep -v '//')"
     ]
   }
 }

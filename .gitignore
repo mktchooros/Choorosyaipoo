@@ -1,36 +1,9 @@
-# Environment variables
-.env.local
-.env.*.local
-
-# Dependencies
 node_modules/
-/.pnp
-.pnp.js
-
-# Testing
-/coverage
-
-# Next.js
-/.next/
-/out/
-
-# Production
-/build
-
-# Misc
+.env.local
+config.js
+*.log
 .DS_Store
-*.pem
-
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Local env files
-.env*.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+dist/
+build/
+.vercel/
+.next/
