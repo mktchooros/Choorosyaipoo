@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
   let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
 
-  // Inject Supabase config from environment variables
+  // Inject Supabase config from environment variables (replace config.js with inline script)
   const configScript = `<script>
 window.SUPABASE_CONFIG = {
   url: '${process.env.REACT_APP_SUPABASE_URL || ''}',
@@ -20,9 +20,8 @@ window.SUPABASE_CONFIG = {
 };
 </script>`;
 
-  // Insert config script before the Supabase library script
-  html = html.replace('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>',
-                       configScript + '\n<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>');
+  // Replace the config.js script tag with inline config
+  html = html.replace('<script src="config.js"></script>', configScript);
 
   res.send(html);
 });
