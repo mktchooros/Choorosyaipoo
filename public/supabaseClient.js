@@ -9,4 +9,14 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY ||
   throw new Error('Missing Supabase credentials. Please update config.js with your project credentials.');
 }
 
-window.supabase = window.supabase || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Wait for Supabase library to load, then create client
+const initSupabase = () => {
+  if (window.supabase && window.supabase.createClient) {
+    window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } else if (window.supabaseLib && window.supabaseLib.createClient) {
+    window.supabase = window.supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } else {
+    setTimeout(initSupabase, 100);
+  }
+};
+initSupabase();
