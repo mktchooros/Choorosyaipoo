@@ -123,7 +123,7 @@ function App() {
     );
   }
 
-  const addMov = useCallback((m) => {
+  const addMov = (m) => {
     const movRecord = {
       mov_id: "M" + Date.now(),
       ts: Date.now(),
@@ -131,26 +131,23 @@ function App() {
       ...m,
     };
     setMovs(prev => [movRecord, ...prev]);
-  }, [user]);
+  };
 
-  const go = useCallback((p) => {
+  const go = (p) => {
     setPage(p);
     setItemSku(null);
-  }, []);
+  };
 
-  const openItem = useCallback((sku) => {
+  const openItem = (sku) => {
     setItemSku(sku);
     setPage("itemDetail");
-  }, []);
+  };
 
-  const lowCount = useMemo(() => {
-    let n = 0;
-    (products || []).forEach(p => {
-      const total = Object.values(stock[p.sku] || {}).reduce((s, v) => s + v, 0);
-      if (total <= p.reorder) n++;
-    });
-    return n;
-  }, [stock, products]);
+  let lowCount = 0;
+  (products || []).forEach(p => {
+    const total = Object.values(stock[p.sku] || {}).reduce((s, v) => s + v, 0);
+    if (total <= p.reorder) lowCount++;
+  });
 
   const sections = [...new Set(NAV.map(n => n.section))];
 
